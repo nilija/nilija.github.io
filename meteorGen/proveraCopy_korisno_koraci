@@ -1,0 +1,18 @@
+#!/bin/bash
+
+echo "Menjam direktorijum..."
+cd /var/www/delovizatraktore_rs/docroot/meteorGen/work/n_ilija@yahoo.com/ || { echo "Neuspešno menjanje direktorijuma"; exit 1; }
+pwd
+
+echo "Proveravam izvorni direktorijum .meteor..."
+ls -la /var/www/delovizatraktore_rs/docroot/meteorGen/meteorGen_web/meteor2.5.2/.meteor/ || { echo "Izvorni direktorijum ne postoji"; exit 1; }
+
+echo "Proveravam odredisni direktorijum ..."
+ls -la /var/www/delovizatraktore_rs/docroot/meteorGen/work/n_ilija@yahoo.com/ || { echo "Izvorni direktorijum ne postoji"; exit 1; }
+
+echo "Kopiram .meteor direktorijum..."
+cp -R /var/www/delovizatraktore_rs/docroot/meteorGen/meteorGen_web/meteor2.5.2/.meteor/ ./ || { echo "Greška prilikom kopiranja direktorijuma .meteor"; exit 1; }
+
+echo "Sadržaj direktorijuma .meteor:"
+ls -la .meteor/
+

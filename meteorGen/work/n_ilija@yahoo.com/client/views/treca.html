@@ -1,0 +1,39 @@
+<!-- /**
+ * Meteor: the smart way to build applications!
+ *
+ * @copyright     Copyright 2014, 
+ * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ *
+ * filename:      client/views/treca.html
+ * generated:     2024/12/12 9:37
+ */ -->
+
+<template name="treca">
+
+    <link rel="stylesheet" type="text/css" href="/assets/css/reactiveTables.css">
+
+    <div class="table-responsive" style="padding: 15px;">
+        {{> reactiveTable collection=treca settings=settings }}
+    </div>
+
+    <div class="modal fade" id="modalTreca" tabindex="-1" role="dialog" aria-labelledby="modalTrecaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span aria-hidden="true">&times;</span><span class="sr-only">Close</span>
+                    </button>
+                    <h4 class="modal-title" id="modalTrecaLabel">{{modalTitle}}</h4>
+                </div>
+                <div class="modal-body">
+                    {{modalBody}}
+                </div>
+                <div class="modal-footer">
+                    {{modalFooter}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</template>
+<!-- End of generated file -->

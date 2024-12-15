@@ -1,0 +1,789 @@
+#!/usr/bin/env node
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Neophodne biblioteke
+// var execSync = require('/usr/local/lib/node_modules/exec-sync');
+// var argv = require('/usr/local/lib/node_modules/optimist').argv;
+
+var clc = require('./_node_modules/cli-color');
+var prompt = require('./_node_modules/prompt');
+var fs = require('./_node_modules/fs-extra');
+var mkdirp = require('./_node_modules/mkdirp');
+var getDirName = require('./_node_modules/path').dirname;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Useful functions
+//
+// Capitalize first word
+// e.g.
+//           'javaSCrIPT'.capitalize();      // -> 'JavaSCrIPT'
+//           'javaSCrIPT'.capitalize(true);  // -> 'Javascript'
+String.prototype.capitalize = function(lower) {
+	return (lower ? this.toLowerCase() : this).replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+};
+// Format date/time
+var currentDateTime = function() {
+	var today = new Date();
+	var dd = today.getDate();
+	var mm = today.getMonth() + 1; //January is 0!
+	var hh = today.getHours(); // => 9
+	var min = today.getMinutes(); // =>  30
+    //var n = today.getTime();
+	var yyyy = today.getFullYear();
+	if(dd < 10) {
+		dd = '0' + dd;
+	}
+	if(mm < 10) {
+		mm = '0' + mm;
+		if(hh < 10) {
+			hh = '0' + hh;
+		}
+	}
+	if(min < 10) {
+		min = '0' + min;
+	}
+	//return dd+'/'+mm+'/'+yyyy+', '+hh+':'+min;
+	return yyyy + '/' + mm + '/' + dd + ' ' + hh + ':' + min;
+}
+// writeFile
+var writeFile = function(fileName, fileContent) {
+	writeFileIFNE(fileName, fileContent, function(err) {
+		if(err) {
+			console.log(err);
+		} else {
+//			console.log("The file " + clc(fileName).green + ", was saved!");
+		}
+	});
+}
+// write file IfFolderNotExist
+var writeFileIFNE = function(path, contents, cb) {
+	mkdirp(getDirName(path), function (err) {
+		if (err) return cb(err)
+		fs.writeFile(path, contents, cb)
+	})
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// mGen
+//
+// header for files
+var header = function(fileName) {
+	return '/**\n'
+		+ ' * Meteor: the smart way to build applications!\n'
+		+ ' *\n'
+		+ ' * @copyright     Copyright 2014, \n'
+		+ ' * @license       http://opensource.org/licenses/bsd-license.php The BSD License\n'
+		+ ' *\n'
+		+ ' * filename:      ' + fileName + '\n'
+		+ ' * generated:     ' + currentDateTime() + '\n'
+		+ ' */\n';
+};
+// header for HTML files
+var headerHTML = function(fileName) {
+	return '<!-- /**\n'
+		+ ' * Meteor: the smart way to build applications!\n'
+		+ ' *\n'
+		+ ' * @copyright     Copyright 2014, \n'
+		+ ' * @license       http://opensource.org/licenses/bsd-license.php The BSD License\n'
+		+ ' *\n'
+		+ ' * filename:      ' + fileName + '\n'
+		+ ' * generated:     ' + currentDateTime() + '\n'
+		+ ' */ -->\n';
+};
+// collections
+var collectionsFile = function(collectionName) {
+	return '\n'
+		+ collectionName + " = new Meteor.Collection('" + collectionName + "');\n"
+		+ '' + collectionName + '.allow({\n'
+		+ "    'insert': function() {\n"
+		+ '        return true;\n'
+		+ '    },\n'
+		+ "    'remove': function() {\n"
+		+ '        return true;\n'
+		+ '    },\n'
+		+ "    'update': function() {\n"
+		+ '        return true;\n'
+		+ '    }\n'
+		+ '});\n'
+		+ '// End of generated file';
+};
+// routers
+var routersFile = function(collectionName) {
+	return '\n'
+		+ "Router.route('/" + collectionName + "',\n"
+		+ '    function() {\n'
+		+ "        this.wait(Meteor.subscribe('" + collectionName + "'));\n"
+		+ "        if (this.ready()) {\n"
+		+ "            this.render();\n"
+		+ "        } else {\n"
+		+ "            this.render('loading');\n"
+		+ "        }\n"
+		+ "    }\n"
+		+ ');\n'
+		+ '// End of generated file';
+};
+// publications file
+var publicationsFile = function(collectionName) {
+	return '\n'
+		+ "Meteor.publish('" + collectionName + "', function () {\n"
+		+ "    return " + collectionName + ".find();\n"
+		+ '});\n'
+		+ '// End of generated file';
+};
+// subcriptions file
+var subscriptionsFile = function(collectionName) {
+	return '\n'
+		+ 'if (Meteor.userId()) {\n'
+		+ "    Meteor.subscribe('" + collectionName + "');\n"
+		+ '}\n'
+		+ '// End of generated file';
+};
+// template js file
+var templateJSFile = function(collectionName, collectionCapitalName, AnyField_, AnyFieldType_) {
+	return '\n'
+		+ "Template." + collectionName + ".helpers({\n"
+		+ "    " + collectionName + ": function() {\n"
+		+ "        return " + collectionName + ".find().fetch();\n"
+		+ "    },\n"
+		+ "    modalTitle: function() {\n"
+		+ "        switch(Session.get(\"activity\")){\n"
+		+ "            case 'add':\n"
+		+ "                return i18n('" + collectionName + ".modalTitleAdd');\n"
+		+ "            case 'view':\n"
+		+ "                return i18n('" + collectionName + ".modalTitleView');\n"
+		+ "            case 'edit':\n"
+		+ "                return i18n('" + collectionName + ".modalTitleEdit');\n"
+		+ "            case 'delete':\n"
+		+ "                return i18n('" + collectionName + ".modalTitleDelete');\n"
+		+ "        }\n"
+		+ "    },\n"
+		+ "    modalBody: function() {\n"
+		+ "        var tHeader = '<table style=\"width: 100%;\"><tbody>';\n"
+		+ "        var tdLeft1 = '<tr><td style=\"width: 20%; text-align: right; padding-top: 5px;\"><label>';\n"
+		+ "        var tdLeft2 = '</label></td><td style=\"width: 2%;\"></td>';\n"
+		+ "        var tdRight1 = '<td style=\"width: 78%;\"><input type=\"" + AnyFieldType_ + "\" style=\"height: 23px; width: 100%;\" class=\"form-control\" id=\"';\n"
+		+ "        var tdRight2Add = '\" \/></td></tr>';\n"
+		+ "        var tdRight2View = '\" value=\"';\n"
+		+ "        var tdRight2ViewEnd = '\" disabled=\"\"/></td></tr>';\n"
+		+ "        var tFooter ='</tbody></table>';\n"
+		+ "        switch(Session.get(\"activity\")){\n"
+		+ "            case 'add':\n"
+		+ "                return Spacebars.SafeString(tHeader\n"
+		+ templateJSFile_1 (collectionName, AnyField_, AnyFieldType_)
+		+ "                +tFooter);\n"
+		+ "            case 'view':\n"
+		+ "                return Spacebars.SafeString(tHeader\n"
+		+ "                +tdLeft1+i18n('" + collectionName + ".fieldIdModalLabel')+tdLeft2+tdRight1+'m_id'+tdRight2View+Session.get('_id')+tdRight2ViewEnd\n"
+		+ templateJSFile_2 (collectionName, AnyField_, AnyFieldType_)
+		+ "                +tFooter);\n"
+		+ "            case 'edit':\n"
+		+ "                return Spacebars.SafeString(tHeader\n"
+		+ "                +tdLeft1+i18n('" + collectionName + ".fieldIdModalLabel')+tdLeft2+tdRight1+'m_id'+tdRight2View+Session.get('_id')+tdRight2ViewEnd\n"
+		+ templateJSFile_3 (collectionName, AnyField_, AnyFieldType_)
+		+ "                +tFooter);\n"
+		+ "            case 'delete':\n"
+		+ "                return Spacebars.SafeString(tHeader\n"
+		+ "                +tdLeft1+i18n('" + collectionName + ".fieldIdModalLabel')+tdLeft2+tdRight1+'m_id'+tdRight2View+Session.get('_id')+tdRight2ViewEnd\n"
+		+ templateJSFile_4 (collectionName, AnyField_, AnyFieldType_)
+		+ "                +tFooter);\n"
+		+ "        }\n"
+		+ "    },\n"
+		+ "    modalFooter: function() {\n"
+		+ "        switch(Session.get(\"activity\")){\n"
+		+ "            case 'add':\n"
+		+ "                return new Spacebars.SafeString('<button type=\"button\" class=\"btn btn-default btn-xs\" data-dismiss=\"modal\">'+i18n('" + collectionName + ".modalFooterCancel')+'</button>'\n"
+		+ "                + '<button id=\"bAdd\" type=\"button\" class=\"btn btn-success btn-xs\">'+i18n('" + collectionName + ".modalFooterAdd')+'</button>');\n"
+		+ "            case 'view':\n"
+		+ "                return new Spacebars.SafeString('<button type=\"button\" class=\"btn btn-default btn-xs\" data-dismiss=\"modal\">'+i18n('" + collectionName + ".modalFooterClose')+'</button>');\n"
+		+ "            case 'edit':\n"
+		+ "                return new Spacebars.SafeString('<button type=\"button\" class=\"btn btn-default btn-xs\" data-dismiss=\"modal\">'+i18n('" + collectionName + ".modalFooterCancel')+'</button>'\n"
+		+ "                       + '<button id=\"bEdit\" type=\"button\" class=\"btn btn-primary btn-xs\">'+i18n('" + collectionName + ".modalFooterChange')+'</button>');\n"
+		+ "            case 'delete':\n"
+		+ "                return new Spacebars.SafeString('<button type=\"button\" class=\"btn btn-default btn-xs\" data-dismiss=\"modal\">'+i18n('" + collectionName + ".modalFooterNo')+'</button>'\n"
+		+ "                       + '<button id=\"bDelete\" type=\"button\" class=\"btn btn-danger btn-xs\">'+i18n('" + collectionName + ".modalFooterYes')+'</button>');\n"
+		+ "        }\n"
+		+ "    },\n"
+		+ "    settings: function() {\n"
+		+ "        return {\n"
+		+ "            fields: [\n"
+		+ "                { key: 'bittons', label: '',\n"
+		+ "                    fn: function (value, object) {\n"
+		+ "                        return new Spacebars.SafeString('<a data-toggle=\"modal\" data-tooltip=\"'+i18n('" + collectionName + ".tooltipView')+'\" data-target=\"#modal" + collectionCapitalName + "\" onclick=\"Session.set('+\"'activity','view'\"+');\" class=\"label label-default tooltip-right\"><i class=\"glyphicon glyphicon-search\"></i></a>'\n"
+		+ "                                +'<a data-toggle=\"modal\" data-tooltip=\"'+i18n('" + collectionName + ".tooltipEdit')+'\" data-target=\"#modal" + collectionCapitalName + "\" onclick=\"Session.set('+\"'activity','edit'\"+');\" class=\"label label-primary tooltip-right\"><i class=\"glyphicon glyphicon-edit\"></i></a>'\n"
+		+ "                                +'<a data-toggle=\"modal\" data-tooltip=\"'+i18n('" + collectionName + ".tooltipDelete')+'\" data-target=\"#modal" + collectionCapitalName + "\" onclick=\"Session.set('+\"'activity','delete'\"+');\" class=\"label label-danger tooltip-right\"><i class=\"glyphicon glyphicon-remove\"></i></a>'\n"
+		+ "                        );\n"
+		+ "                    }\n"
+		+ "                },\n"
+		+ templateJSFile_5 (collectionName, AnyField_)
+		+ "            ],\n"
+		+ "            rowClass: function(item) {},\n"
+		+ "            showFilter: true,\n"
+		+ "            rowsPerPage:10,\n"
+		+ "            showNavigation:'auto', //  always never auto\n"
+		+ "            useFontAwesome: true,\n"
+		+ "            showNavigationRowsPerPage: true,\n"
+		+ "            showColumnToggles:false,\n"
+		+ "            class: \"table table-striped table-hover\" // table table-striped table-bordered table-hover table-condensed\n"
+		+ "        }\n"
+		+ "    }\n"
+		+ "});\n"
+		+ "\n"
+		+ "Template." + collectionName + ".events({\n"
+		+ "    'click .reactive-table tr': function (event) {\n"
+		+ "        if(this._id!=undefined) {\n"
+		+ "            Session.set('_id', this._id);\n"
+		+ templateJSFile_6 (collectionName, AnyField_)
+		+ "        }\n"
+		+ "    },\n"
+		+ "    'click #bAdd': function(event) {\n"
+		+ "        var err = validateInput_" + collectionCapitalName + "();\n"
+		+ "        if(err == 0){\n"
+		+ "            try {\n"
+		+ "                " + collectionName + ".insert({\n"
+		+ templateJSFile_7 (collectionName, AnyField_)
+		+ "            });\n"
+		+ "                $.growl('<strong>'+i18n('" + collectionName + ".growlSuccessAdd')+'</strong>', {\n"
+		+ "                    type: 'success', z_index: 99999, allow_dismiss: false\n"
+		+ "                });\n"
+		+ "            }\n"
+		+ "            catch(err) {\n"
+		+ "                $.growl('<strong>'+i18n('" + collectionName + ".growlError')+'<\/strong><br \/>'+err.message, {\n"
+		+ "                    type: 'danger', z_index: 99999, allow_dismiss: false\n"
+		+ "                });\n"
+		+ "            }\n"
+		+ "            $('#modal" + collectionCapitalName + "').modal('hide');\n"
+		+ "        }\n"
+		+ "    },\n"
+		+ "    'click #bEdit': function(event) {\n"
+		+ "        var err = validateInput_" + collectionCapitalName + "();\n"
+		+ "        if(err == 0){\n"
+		+ "            try {\n"
+		+ "                " + collectionName + ".update({'_id': Session.get('_id')}, {$set: {\n"
+		+ templateJSFile_8 (collectionName, AnyField_)
+		+ "			}});\n"
+		+ "                $.growl('<strong>'+i18n('" + collectionName + ".growlSuccessEdit')+'<\/strong>', {\n"
+		+ "                    type: 'success', z_index: 99999, allow_dismiss: false\n"
+		+ "                });\n"
+		+ "            }\n"
+		+ "            catch(err) {\n"
+		+ "                $.growl('<strong>'+i18n('" + collectionName + ".growlError')+'<\/strong><br \/>'+err.message, {\n"
+		+ "                    type: 'danger', z_index: 99999, allow_dismiss: false\n"
+		+ "                });\n"
+		+ "            }\n"
+		+ "            $('#modal" + collectionCapitalName + "').modal('hide');\n"
+		+ "        }\n"
+		+ "    },\n"
+		+ "    'click #bDelete': function(event) {\n"
+		+ "        try {\n"
+		+ "            " + collectionName + ".remove({ '_id': Session.get('_id')});\n"
+		+ "            $.growl('<strong>'+i18n('" + collectionName + ".growlSuccessDelete')+'<\/strong>', {\n"
+		+ "                type: 'success', z_index: 99999, allow_dismiss: false\n"
+		+ "            });\n"
+		+ "        }\n"
+		+ "        catch(err) {\n"
+		+ "            $.growl('<strong>'+i18n('" + collectionName + ".growlError')+'<\/strong><br \/>'+err.message, {\n"
+		+ "                type: 'danger', z_index: 99999, allow_dismiss: false\n"
+		+ "            });\n"
+		+ "        }\n"
+		+ "        $('#modal" + collectionCapitalName + "').modal('hide');\n"
+		+ "    }\n"
+		+ "});\n"
+		+ "\n"
+		+ "Template." + collectionName + ".rendered = function() {\n"
+		+ "    $('.reactive-table-filter').html('<div class=\"row\">'\n"
+		+ "            +'<h3 class=\"pull-left\" style=\"color: rgb(49, 112, 143);\"><em><strong>'+i18n('" + collectionName + ".title')+'<\/strong><\/em><\/h3>'\n"
+		+ "            +'<h3 class=\"pull-right\"><a data-tooltip=\"'+i18n('" + collectionName + ".tooltipPrint')+'\" class=\"btn btn-info btn-sm tooltip-left\">'+i18n('" + collectionName + ".titlePrint')+'<\/a>&nbsp;&nbsp;'\n"
+		+ "            +'<a data-toggle=\"modal\" data-tooltip=\"'+i18n('" + collectionName + ".tooltipAdd')+'\" data-target=\"#modal" + collectionCapitalName + "\" onclick=\"Session.set(' + \"'activity','add'\" + ');\"class=\"btn btn-success btn-sm tooltip-left\">+<\/a><\/h3>'\n"
+		+ "            +'</div>'\n"
+		+ "            +$('.reactive-table-filter').html()\n"
+		+ "    );\n"
+		+ "    $('#modal" + collectionCapitalName + "').on('shown.bs.modal', function (e) {\n"
+		+ "        if(Session.get('activity')=='add') {\n"
+		+ templateJSFile_9 (collectionName, AnyField_)
+		+ "        } else {\n"
+		+ templateJSFile_10 (collectionName, AnyField_)
+		+ "        }\n"
+		+ "        $('#m_"+AnyField_[0]+"').focus();\n"
+		+ "    });\n"
+		+ "}\n"
+		+ "\n"
+		+ "function validateInput_" + collectionCapitalName + "() {\n"
+		+ "    var err = 0;\n"
+		+ templateJSFile_11 (collectionName, AnyField_)
+		+ "    return err;\n"
+		+ "}\n"
+		+ '// End of generated file';
+};
+
+var tdRight = function(collectionName, AnyField_, AnyFieldType_) {
+
+	return "					+'<input type=\"" + AnyFieldType_ + "\" style=\"height: 23px; width: 100%;\" class=\"form-control\" id=\"'+"
+};
+
+var templateJSFile_1 = function(collectionName, AnyField_, AnyFieldType_) {
+//	console.log('____________________');
+
+//	console.log(AnyField_);
+//	console.log(AnyFieldType_);
+	var msg = '';
+	for ( i=0; i < AnyField_.length; i++ ) {
+
+	msg = msg
+	+ "                +tdLeft1+i18n('" + collectionName + ".field"+AnyField_[i]+"ModalLabel')+tdLeft2 +'<td style=\"width: 78%;\">'\n"
+	+tdRight(collectionName, AnyField_[i], AnyFieldType_[i])+"'m_"+AnyField_[i]+"'+tdRight2Add\n"
+	}
+	return msg;
+};
+var templateJSFile_2 = function(collectionName, AnyField_, AnyFieldType_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length; i++ ) {
+
+	msg = msg
+	+ "                +tdLeft1+i18n('" + collectionName + ".field"+AnyField_[i]+"ModalLabel')+tdLeft2 +'<td style=\"width: 78%;\">'\n"
+	+tdRight(collectionName, AnyField_[i], AnyFieldType_[i])+"'m_"+AnyField_[i]+"'+tdRight2View+Session.get('"+AnyField_[i]+"')+tdRight2ViewEnd\n"
+	}
+	return msg;
+};
+var templateJSFile_3 = function(collectionName, AnyField_, AnyFieldType_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length; i++ ) {
+
+	msg = msg
+	+ "                +tdLeft1+i18n('" + collectionName + ".field"+AnyField_[i]+"ModalLabel')+tdLeft2 +'<td style=\"width: 78%;\">'\n"
+	+tdRight(collectionName, AnyField_[i], AnyFieldType_[i])+"'m_"+AnyField_[i]+"'+tdRight2View+Session.get('"+AnyField_[i]+"')+tdRight2Add\n"
+	}
+	return msg;
+};
+var templateJSFile_4 = function(collectionName, AnyField_, AnyFieldType_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length; i++ ) {
+
+	msg = msg
+	+ "                +tdLeft1+i18n('" + collectionName + ".field"+AnyField_[i]+"ModalLabel')+tdLeft2 +'<td style=\"width: 78%;\">'\n"
+	+tdRight(collectionName, AnyField_[i], AnyFieldType_[i])+"'m_"+AnyField_[i]+"'+tdRight2View+Session.get('"+AnyField_[i]+"')+tdRight2ViewEnd\n"
+	}
+	return msg;
+};
+var templateJSFile_5 = function(collectionName, AnyField_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length-1; i++ ) {
+
+		msg = msg
+		+ "                { key: '"+AnyField_[i]+"', label: i18n('" + collectionName + ".field"+AnyField_[i]+"GridLabel'), sort: 'asc' },\n"
+	}
+		msg = msg
+		+ "                { key: '"+AnyField_[i]+"', label: i18n('" + collectionName + ".field"+AnyField_[i]+"GridLabel'), sort: 'asc' }\n"
+
+	return msg;
+};
+var templateJSFile_6 = function(collectionName, AnyField_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length; i++ ) {
+
+		msg = msg
+		+ "            Session.set('"+AnyField_[i]+"', this."+AnyField_[i]+");\n"
+	}
+	return msg;
+};
+var templateJSFile_7 = function(collectionName, AnyField_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length-1; i++ ) {
+
+		msg = msg
+		+ "                       '"+AnyField_[i]+"': $('#m_"+AnyField_[i]+"').val(),\n"
+	}
+		msg = msg
+		+ "                       '"+AnyField_[i]+"': $('#m_"+AnyField_[i]+"').val()\n"
+
+	return msg;
+};
+var templateJSFile_8 = function(collectionName, AnyField_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length-1; i++ ) {
+
+		msg = msg
+		+ "                       '"+AnyField_[i]+"': $('#m_"+AnyField_[i]+"').val(),\n"
+	}
+		msg = msg
+		+ "                       '"+AnyField_[i]+"': $('#m_"+AnyField_[i]+"').val()\n"
+
+return msg;
+};
+var templateJSFile_9 = function(collectionName, AnyField_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length; i++ ) {
+
+		msg = msg
+		+ "            $('#m_"+AnyField_[i]+"').val('');\n"
+	}
+	return msg;
+};
+var templateJSFile_10 = function(collectionName, AnyField_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length; i++ ) {
+
+		msg = msg
+		+ "            $('#m_"+AnyField_[i]+"').val(Session.get('"+AnyField_[i]+"'));\n"
+	}
+	return msg;
+};
+var templateJSFile_11 = function(collectionName, AnyField_) {
+	var msg = '';
+	for ( i=0; i < AnyField_.length; i++ ) {
+
+		msg = msg
+		+ "    if($('#m_"+AnyField_[i]+"').val().length < 2) {\n"
+		+ "        $.growl('<strong>'+i18n('" + collectionName + ".growlError')+'<\/strong><br \/>'+i18n('" + collectionName + ".field"+AnyField_[i]+"GrowlErrorMessage'), {\n"
+		+ "            type: 'danger', z_index: 99999, allow_dismiss: false\n"
+		+ "        });\n"
+		+ "        err++;\n"
+		+ "    }\n"
+	}
+	return msg;
+};
+
+// template file
+var templateFile = function(collectionName, collectionCapitalName) {
+	return '\n'
+		+ '<template name="' + collectionName + '">\n'
+		+ '\n'
+		+ '    <link rel="stylesheet" type="text/css" href="/assets/css/reactiveTables.css">\n'
+		+ '\n'
+		+ '    <div class="table-responsive" style="padding: 15px;">\n'
+		+ '        {{> reactiveTable collection=' + collectionName + ' settings=settings }}\n'
+		+ '    </div>\n'
+		+ '\n'
+		+ '    <div class="modal fade" id="modal' + collectionCapitalName + '" tabindex="-1" role="dialog" aria-labelledby="modal' + collectionCapitalName + 'Label" aria-hidden="true">\n'
+		+ '        <div class="modal-dialog">\n'
+		+ '            <div class="modal-content">\n'
+		+ '                <div class="modal-header">\n'
+		+ '                    <button type="button" class="close" data-dismiss="modal">\n'
+		+ '                        <span aria-hidden="true">&times;</span><span class="sr-only">Close</span>\n'
+		+ '                    </button>\n'
+		+ '                    <h4 class="modal-title" id="modal' + collectionCapitalName + 'Label">{{modalTitle}}</h4>\n'
+		+ '                </div>\n'
+		+ '                <div class="modal-body">\n'
+		+ '                    {{modalBody}}\n'
+		+ '                </div>\n'
+		+ '                <div class="modal-footer">\n'
+		+ '                    {{modalFooter}}\n'
+		+ '                </div>\n'
+		+ '            </div>\n'
+		+ '        </div>\n'
+		+ '    </div>\n'
+		+ '\n'
+		+ '</template>\n'
+		+ '<!-- End of generated file -->';
+};
+// i18n file
+var i18nFile = function(collectionName, title, modalTitleAdd, modalTitleView, modalTitleEdit, modalTitleDelete, growlSuccessAdd, growlSuccessEdit, growlSuccessDelete, AnyField_) {
+	return '\n'
+		+ "i18n.map('sr', {\n"
+		+ "    " + collectionName + ": {\n"
+		+ "        title: '" + title + "',\n"
+		+ "        tooltipPrint: 'Štampa',\n"
+		+ "        titlePrint: 'Print',\n"
+		+ "\n"
+		+ "        tooltipAdd: 'Novi',\n"
+		+ "        tooltipView: 'Pregled',\n"
+		+ "        tooltipEdit: 'Izmena',\n"
+		+ "        tooltipDelete: 'Brisanje',\n"
+		+ "\n"
+		+ "        modalTitleAdd: '" + modalTitleAdd + "',\n"
+		+ "        modalTitleView: '" + modalTitleView + "',\n"
+		+ "        modalTitleEdit: '" + modalTitleEdit + "',\n"
+		+ "        modalTitleDelete: '" + modalTitleDelete + "',\n"
+		+ "\n"
+		+ "        modalFooterCancel: 'Odustani',\n"
+		+ "        modalFooterAdd: 'Kreiraj',\n"
+		+ "        modalFooterClose: 'Zatvori',\n"
+		+ "        modalFooterChange: 'Izmeni',\n"
+		+ "        modalFooterNo: 'Ne',\n"
+		+ "        modalFooterYes: 'Da',\n"
+		+ "\n"
+		+ "        growlError: 'GREŠKA:',\n"
+		+ "        growlSuccessAdd: '" + growlSuccessAdd + "',\n"
+		+ "        growlSuccessEdit: '" + growlSuccessEdit + "',\n"
+		+ "        growlSuccessDelete: '" + growlSuccessDelete + "',\n"
+		+ "\n"
+		+ "        fieldIdGridLabel: '_id',\n"
+		+ "        fieldIdModalLabel: '_id:',\n"
+		+ "\n"
+		+ "// Na dalje se ponavlja za svako polje iz kolekcije sledeca tri reda:\n"
+		+ i18nFile_(AnyField_)
+		+ "\n"
+		+ "    }\n"
+		+ "});\n"
+		+ '// End of generated file';
+};
+
+var i18nFile_ = function(AnyField_) {
+
+	var msg = '';
+	for ( i=0; i < AnyField_.length-1; i++ )
+	{
+//	console.log(AnyField_[i]);
+	msg = msg
+		+ "\n"
+		+ "        field"+AnyField_[i]+"GridLabel: '"+AnyField_[i]+"',\n"
+		+ "        field"+AnyField_[i]+"ModalLabel: '"+AnyField_[i]+":',\n"
+		+ "        field"+AnyField_[i]+"GrowlErrorMessage: 'Niste zadali vrednost za "+AnyField_[i]+"!',\n"
+
+	}
+//	console.log(AnyField_[i]);
+	msg = msg
+		+ "\n"
+		+ "        field"+AnyField_[i]+"GridLabel: '"+AnyField_[i]+"',\n"
+		+ "        field"+AnyField_[i]+"ModalLabel: '"+AnyField_[i]+":',\n"
+		+ "        field"+AnyField_[i]+"GrowlErrorMessage: 'Niste zadali vrednost za "+AnyField_[i]+"!'\n"
+
+	return msg;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Run
+//
+// Glavna funkcija
+//const fs = require('fs');
+const readline = require('readline');
+
+// Glavna funkcija
+const mGenDo = function getP(filenames) {
+//    console.log('Generation process started!');
+
+	filenames.forEach(function(filename) {
+//        console.log("Obrađujem fajl:", filename);
+
+		// Postavite kod za čitanje i obradu svakog fajla
+		const result = {};
+		const fields = [];
+		const fieldTypes = [];
+		let isFieldSection = false;
+
+		// Koristimo readline za čitanje fajla po linijama
+		const fileStream = fs.createReadStream(filename);
+		const rl = readline.createInterface({
+			input: fileStream,
+			crlfDelay: Infinity, // Za UNIX i Windows linijske završetke
+		});
+
+		rl.on('line', (line) => {
+			// Vaša logika za obradu linija unutar fajla
+			if (line.trim() === '---') {
+			// Kada naiđemo na separator, prelazimo na sekciju polja i tipova
+			isFieldSection = true;
+			return; // Preskoči ovu liniju
+		}
+
+		if (!isFieldSection) {
+			// Prva sekcija - osnovne informacije
+			const parts = line.split('=');
+			const key = parts[0].trim();
+			const value = parts[1]?.trim() || ''; // Provera da value postoji
+			result[key] = value;
+		} else {
+			// Druga sekcija - polja i tipovi
+			const fieldParts = line.split(',');
+			const fieldName = fieldParts[0]?.trim() || ''; // Provera da fieldName postoji
+			const fieldType = fieldParts[1]?.trim() || ''; // Provera da fieldType postoji
+			if (fieldName && fieldType) {
+				fields.push(fieldName);
+				fieldTypes.push(fieldType);
+			}
+		}
+	});
+
+		rl.on('close', () => {
+			// Kada je fajl u potpunosti obrađen
+//            console.log('Obrada fajla završena:', filename);
+			mGenDo_(result, fields, fieldTypes);
+	});
+
+		rl.on('error', (err) => {
+//            console.error('Greška prilikom čitanja fajla:', filename, err);
+		});
+	});
+
+// azuriranje linkova 	"client/views/components/dashboardLayout.html"
+
+	const listItems = filenames.map((filename) => {
+			const cleanName = filename.slice(0, -4); // Uklanja ".txt"
+	return `<li><a href="/${cleanName}">${cleanName}</a></li>`;
+}).
+	join("\n				");
+
+//	console.log("Generisani HTML za kolekcije:\n", listItems);
+
+// Čitamo fajl i zamenjujemo placeholder
+	fs.readFile("client/views/components/dashboardLayout.html", "utf8", function (err, data) {
+		if (err) {
+			console.error("Greška pri čitanju fajla:", err);
+			return;
+		}
+
+		// Zamenjujemo placeholder sa generisanim HTML stringom
+		const updatedContent = data.replace('<li><a href="/#"></a></li>', listItems);
+
+		// Upisujemo ažurirani sadržaj u fajl
+		fs.writeFile("client/views/components/dashboardLayout.html", updatedContent, "utf8", function (err) {
+			if (err) {
+				console.error("Greška pri pisanju fajla:", err);
+				return;
+			}
+//			console.log("HTML fajl je uspešno ažuriran.");
+		});
+	});
+
+/*	const path = './_node_modules_';
+
+
+// Umesto streličaste funkcije, koristimo običnu funkciju
+//	fs.rm(path, { recursive: true, force: true }, (err) => {
+	fs.rm(path, {recursive: true, force: true}, function (err) {
+		if (err) {
+			console.error('Došlo je do greške pri brisanju direktorijuma:', err);
+		} else {
+			console.log('Pomocni direktorijum _node_modules je uspešno obrisan');
+		}
+	});*/
+
+};
+
+
+// Funkcija koja prima podatke i obrađuje ih
+
+var mGenDo_ = function getP (result, fields, fieldTypes) {
+
+//	console.log("Rezultati iz prve sekcije:", result);
+//	console.log("Imena polja:", fields);
+//	console.log("Tipovi polja:", fieldTypes);
+
+	AnyField = "BiloSta";
+	// Clear screen
+//	console.log(clc.reset);
+	// Naslov
+//	console.log(clc('m_G_e_n').rainbow);
+	// Prompt settings
+	prompt.delimiter = "'".green;
+	prompt.message = "> ".cyan;
+
+	/*	prompt.start();
+	 prompt.get(
+	 [
+	 { name: 'collection',description: 'Collection name', pattern: /^[a-z]+$/, message: 'Naziv kolekcije na MongoDB bazi ne sme biti prazan\n\t I moze sadrzavati samo mala slova!', required: true },
+	 { name: 'title', description: 'Application title', message: 'Naslov ne sme biti prazan!', required: true },
+	 { name: 'modalTitleAdd', description: 'Modal title for Add', message: 'Naslov ne sme biti prazan!', required: true },
+	 { name: 'modalTitleView', description: 'Modal title for View', message: 'Naslov ne sme biti prazan!', required: true },
+	 { name: 'modalTitleEdit', description: 'Modal title for Edit', message: 'Naslov ne sme biti prazan!', required: true },
+	 { name: 'modalTitleDelete', description: 'Modal title for Delete', message: 'Naslov ne sme biti prazan!', required: true },
+	 { name: 'growlSuccessAdd', description: 'Growl success for Add', message: 'Naslov ne sme biti prazan!', required: true },
+	 { name: 'growlSuccessEdit', description: 'Growl success for Edit', message: 'Naslov ne sme biti prazan!', required: true },
+	 { name: 'growlSuccessDelete', description: 'Growl success for Delete', message: 'Naslov ne sme biti prazan!', required: true }
+	 ],
+	 function (err, result) {*/
+	var collectionName = result.collection;
+	var collectionCapitalName = result.collection.capitalize();
+	var title = result.title;
+	var modalTitleAdd = result.modalTitleAdd;
+	var modalTitleView = result.modalTitleView;
+	var modalTitleEdit = result.modalTitleEdit;
+	var modalTitleDelete = result.modalTitleDelete;
+	var growlSuccessAdd = result.growlSuccessAdd;
+	var growlSuccessEdit = result.growlSuccessEdit;
+	var growlSuccessDelete = result.growlSuccessDelete;
+
+	// Primer korišćenja vrednosti
+//	console.log("Naziv kolekcije:", collectionName);
+//	console.log("Naslov aplikacije:", title);
+//	console.log("Naslov za dodavanje u modal prozoru:", modalTitleAdd);
+//	console.log("Uspešna poruka za dodavanje:", growlSuccessAdd);
+
+
+//	var lineReader = require('line-reader');
+
+//			var AnyField_ = [];
+	var AnyField_ = new Array();
+	var AnyFieldType_ = new Array();
+	var collectionName_ = collectionName + '.txt';
+//	console.log(collectionName_);
+
+// Direktno dodeljivanje (korišćenje znaka =)
+	var AnyField_ = fields;
+	var AnyFieldType_ = fieldTypes;
+
+// Test: Prikazivanje rezultata
+//	console.log("AnyField_: ", AnyField_);
+//	console.log("AnyFieldType_: ", AnyFieldType_);
+
+//	console.log(clc('Generation proccess started!').cyan);
+	writeFile("collections/" + collectionName + ".js", header("collections/" + collectionName + ".js") + collectionsFile(collectionName));
+	writeFile("client/routers/" + collectionName + ".js", header("client/routers/" + collectionName + ".js") + routersFile(collectionName));
+	writeFile("server/publications/" + collectionName + ".js", header("server/publications/" + collectionName + ".js") + publicationsFile(collectionName));
+	//writeFile("client/subscriptions/" + collectionName + ".js", header("client/subscriptions/" + collectionName + ".js") + subscriptionsFile(collectionName));
+	writeFile("client/views/" + collectionName + ".html", headerHTML("client/views/" + collectionName + ".html") + templateFile(collectionName, collectionCapitalName));
+	writeFile("client/views/" + collectionName + ".js", header("client/views/" + collectionName + ".js") + templateJSFile(collectionName, collectionCapitalName, AnyField_, AnyFieldType_));
+	writeFile("client/lib/i18n_" + collectionName + ".js", header("client/lib/i18n_" + collectionName + ".js") + i18nFile(collectionName, title, modalTitleAdd, modalTitleView, modalTitleEdit, modalTitleDelete, growlSuccessAdd, growlSuccessEdit, growlSuccessDelete, AnyField_));
+	var fs = require('fs')
+	/*						<li><a href="/#"></a></li>
+	 <li><a href="/#"></a></li>*/
+
+/*	fs.readFile("client/views/components/dashboardLayout.html", 'utf8', function (err, data) {
+		if (err) {
+			return console.log(err);
+		}
+		var result = data.replace(/#"></g, collectionName + '">' + collectionName + '</a></li><li><a href="/#"><');
+//		console.log("collectionName: ", collectionName);
+//						result = result.replace(/a></g, 'a>' + collectionName + '</li><li><a href="/#"></a><');
+		fs.writeFile("client/views/components/dashboardLayout.html", result, 'utf8', function (err) {
+			if (err) return console.log(err);
+		});
+	});*/
+//	console.log("End of generation!");
+
+}
+// Funkcija za preuzimanje svih fajlova u trenutnom folderu
+var getTxtFiles = function() {
+	var filenames = [];
+	fs.readdirSync('.').forEach(function(file) {
+		if (file.endsWith('.txt')) {
+			filenames.push(file);
+		}
+	});
+	return filenames;
+};
+
+// Pokretanje funkcije
+var filenames = getTxtFiles();
+if (filenames.length > 0) {
+//	console.log("Pokrećem obradu sa sledećim fajlovima:");
+	filenames.forEach(function(filename) {
+//		console.log(filename);
+	});
+	mGenDo(filenames); // Pozivanje funkcije sa listom fajlova
+} else {
+	console.log("Nema .txt fajlova u trenutnom folderu.");
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Start rada
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//getTxtFiles();
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Primer za visestruki input numerickih brojeva
+//var arr = [];
+//function getAnother() {
+//	prompt.get('number', function(err, result) {
+//		if (err) done();
+//		else {
+//			arr.push(parseInt(result.number, 10));
+//			getAnother();
+//		}
+//	})
+//}
+//function done() {
+//	console.log(arr);
+//}
+//prompt.start();
+//getAnother();

@@ -1,0 +1,38 @@
+#!/bin/bash
+echo '============================================='
+echo '          more dir or files !!!'
+echo '============================================='
+
+printf "\n${BGreen}Kopiranje!${NC}\n"
+
+if [ -z "$1" ]; then
+  echo "Greška: Nije prosleđen argument za folder!"
+  exit 1
+fi
+
+TARGET_FOLDER=$1
+echo "Kreiram projekt u folderu: $TARGET_FOLDER"
+# Ostale komande za generisanje
+
+#echo "Menjam direktorijum..."
+#cd $TARGET_FOLDER || { echo "Neuspe分no menjanje direktorijuma"; exit 1; }
+cd work/n_ilija@yahoo.com/ || { echo "Neuspe分no menjanje direktorijuma"; exit 1; }
+pwd
+cp -R ../../meteorGen_web/meteor2.5.2/.meteor/ ./
+cp -R ../../meteorGen_web/meteor2.5.2/node_modules/ ./
+cp -R ../../meteorGen_web/_node_modules/ ./
+
+cp ../../meteorGen_web/mGenFirst ./mGenFirst
+cp ../../meteorGen_web/mGen_c ./mGen_c
+cp ../../meteorGen_web/start ./start
+
+#echo '============================================='
+#printf "\n${BGreen}mGenFirst: Kostur!${NC}\n"
+/home/x/.nvm/versions/node/v18.10.0/bin/node mGenFirst || { echo "Neuspešno ./mGenFirst"; exit 1; }
+
+#echo '============================================='
+#printf "\n${BGreen}mGen_c: Kolekcije!${NC}\n"
+/home/x/.nvm/versions/node/v18.10.0/bin/node mGen_c || { echo "Neuspešno ./mGen_c"; exit 1; }
+
+#./start
+

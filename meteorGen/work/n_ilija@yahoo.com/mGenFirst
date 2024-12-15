@@ -1,0 +1,905 @@
+#!/usr/bin/env node
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Neophodne biblioteke
+// var execSync = require('/usr/local/lib/node_modules/exec-sync');
+// var argv = require('/usr/local/lib/node_modules/optimist').argv;
+
+var clc = require('./_node_modules/cli-color');
+var prompt = require('./_node_modules/prompt');
+var fs = require('./_node_modules/fs-extra');
+var mkdirp = require('./_node_modules/mkdirp');
+var getDirName = require('./_node_modules/path').dirname;
+
+/*var clc = require('/usr/lib/node_modules/cli-color');
+var prompt = require('/usr/lib/node_modules/prompt');
+var fs = require('/usr/lib/node_modules/fs-extra');
+var mkdirp = require('/usr/lib/node_modules/mkdirp');
+var getDirName = require('/usr/lib/node_modules/path').dirname;*/
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Useful functions
+//
+// Capitalize first word
+// e.g.
+//           'javaSCrIPT'.capitalize();      // -> 'JavaSCrIPT'
+//           'javaSCrIPT'.capitalize(true);  // -> 'Javascript'
+String.prototype.capitalize = function(lower) {
+    return (lower ? this.toLowerCase() : this).replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+};
+// Format date/time
+var currentDateTime = function() {
+    var today = new Date();
+    var dd = today.getDate();
+    var mm = today.getMonth() + 1; //January is 0!
+    var hh = today.getHours(); // => 9
+    var min = today.getMinutes(); // =>  30
+    //var n = today.getTime();
+    var yyyy = today.getFullYear();
+    if(dd < 10) {
+        dd = '0' + dd;
+    }
+    if(mm < 10) {
+        mm = '0' + mm;
+        if(hh < 10) {
+            hh = '0' + hh;
+        }
+    }
+    if(min < 10) {
+        min = '0' + min;
+    }
+    //return dd+'/'+mm+'/'+yyyy+', '+hh+':'+min;
+    return yyyy + '/' + mm + '/' + dd + ' ' + hh + ':' + min;
+}
+// writeFile
+var writeFile = function(fileName, fileContent) {
+    writeFileIFNE(fileName, fileContent, function(err) {
+        if(err) {
+            console.log(err);
+        } else {
+//            console.log("The file " + clc(fileName).green + ", was saved!");
+        }
+    });
+}
+// write file IfFolderNotExist
+var writeFileIFNE = function(path, contents, cb) {
+    mkdirp(getDirName(path), function (err) {
+        if (err) return cb(err)
+        fs.writeFile(path, contents, cb)
+    })
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// mGen
+//
+// header for files
+var header = function(fileName) {
+    return '/**\n'
+        + ' * Meteor: the smart way to build applications!\n'
+        + ' *\n'
+        + ' * @copyright     Copyright 2014, \n'
+        + ' * @license       http://opensource.org/licenses/bsd-license.php The BSD License\n'
+        + ' *\n'
+        + ' * filename:      ' + fileName + '\n'
+        + ' * generated:     ' + currentDateTime() + '\n'
+        + ' */\n';
+};
+// header for HTML files
+var headerHTML = function(fileName) {
+    return '<!-- /**\n'
+        + ' * Meteor: the smart way to build applications!\n'
+        + ' *\n'
+        + ' * @copyright     Copyright 2014, \n'
+        + ' * @license       http://opensource.org/licenses/bsd-license.php The BSD License\n'
+        + ' *\n'
+        + ' * filename:      ' + fileName + '\n'
+        + ' * generated:     ' + currentDateTime() + '\n'
+        + ' */ -->\n';
+};
+// start.js
+var startJS = function() {
+    return '\n'
+        + "Meteor.startup(function () {\n"
+        + "    // code to run on server at startup\n"
+        + "    var pass = 'admin';\n"
+        + "    Meteor.users.remove({});\n"
+        + "    Accounts.createUser({\n"
+        + "        username : 'admin',\n"
+        + "        password : pass\n"
+        + "    });\n"
+        + "    console.log(Meteor.users.find().count());\n"
+        + "});\n"
+        + '// End of generated file';
+};
+// i18n config
+var i18nFile = function() {
+    return '\n'
+        + "i18n.setLanguage('sr');\n"
+        + "i18n.showMissing('[no translation for \"<%= label %>\" in <%= language %>]');\n"
+        + '// End of generated file';
+};
+// spiner config
+var spinnerFile = function() {
+    return '\n'
+        + "Meteor.Spinner.options = {\n"
+        + "    lines: 13, // The number of lines to draw\n"
+        + "    length: 10, // The length of each line\n"
+        + "    width: 5, // The line thickness\n"
+        + "    radius: 15, // The radius of the inner circle\n"
+        + "    corners: 0.7, // Corner roundness (0..1)\n"
+        + "    rotate: 0, // The rotation offset\n"
+        + "    direction: 1, // 1: clockwise, -1: counterclockwise\n"
+        + "    color: '#fff', // #rgb or #rrggbb\n"
+        + "    speed: 1, // Rounds per second\n"
+        + "    trail: 60, // Afterglow percentage\n"
+        + "    shadow: true, // Whether to render a shadow\n"
+        + "    hwaccel: false, // Whether to use hardware acceleration\n"
+        + "    className: 'spinner', // The CSS class to assign to the spinner\n"
+        + "    zIndex: 2e9, // The z-index (defaults to 2000000000)\n"
+        + "    top: 'auto', // Top position relative to parent in px\n"
+        + "    left: '100px' // Left position relative to parent in px\n"
+        + "};\n"
+        + '// End of generated file';
+};
+// router config
+var routerConfigFile = function() {
+    return '\n'
+        + "Router.configure({\n"
+        + "    notFoundTemplate: 'home',\n"
+        + "    loadingTemplate: 'loading'\n"
+        + "});\n"
+        + "\n"
+        + "Router.onBeforeAction(function() {\n"
+        + "    //console.log(Router.current().route.getName());\n"
+        + "    if (! Meteor.userId()) {\n"
+        + "        this.layout('preDashboardLayout');\n"
+        + "        this.render('home');\n"
+        + "    } else {\n"
+        + "        this.layout('dashboardLayout');\n"
+        + "        this.next();\n"
+        + "    }\n"
+        + "});\n"
+        + '// End of generated file';
+};
+// dashboardRouter
+var dashboardRouterFile = function() {
+    return '\n'
+        + "Router.map(function () {\n"
+        + "    this.route('dashboard', {\n"
+        + "        path: '/dashboard',\n"
+        + "        template: 'dashboard'\n"
+        + "    });\n"
+        + "});\n"
+        + '// End of generated file';
+};
+// homeRouter
+var homeRouterFile = function() {
+    return '\n'
+        + "Router.map(function () {\n"
+        + "    this.route('home', {\n"
+        + "        path: '/',\n"
+        + "        template: 'home'\n"
+        + "    });\n"
+        + "});\n"
+        + '// End of generated file';
+};
+// main stylesheet
+var mainStyleFile = function() {
+    return '\n'
+        + "/* centered columns styles */\n"
+        + ".row-centered {\n"
+        + "    text-align:center;\n"
+        + "}\n"
+        + ".col-centered {\n"
+        + "    display:inline-block;\n"
+        + "    float:none;\n"
+        + "    text-align:left;  /* reset the text-align */\n"
+        + "    margin-right:-4px; /* inline-block space fix */\n"
+        + "}\n"
+        + ".div-company {\n"
+        + "    /*display:inline-block;*/\n"
+        + "    float:none;\n"
+        + "    text-align:right;  /* reset the text-align */\n"
+        + "    margin-right:10px; /* inline-block space fix */\n"
+        + "}\n"
+        + "/*\n"
+        + " Fixed F o o t e r\n"
+        + " <footer>\n"
+        + " <a href=\"http://www.enetel.rs\" target=\"_blank\"><em>Powered by EneTel solutions</em></a>\n"
+        + " </footer>\n"
+        + " */\n"
+        + "footer {\n"
+        + "    overflow: hidden;\n"
+        + "    width: 100%;\n"
+        + "    /*height: 23px;*/\n"
+        + "    height: 14px;\n"
+        + "    margin: 0;\n"
+        + "    margin-right:20px;\n"
+        + "    /*margin-left:20px;*/\n"
+        + "    position:fixed;\n"
+        + "    right:0px;\n"
+        + "    bottom:0px;\n"
+        + "    font-family: Verdana;\n"
+        + "    font-size: 8px;\n"
+        + "    text-align: right;\n"
+        + "    font-style: italic;\n"
+        + "}\n"
+        + "footer a{\n"
+        + "    color:#aaa;\n"
+        + "    /*text-transform:uppercase; */\n"
+        + "    text-decoration:none;\n"
+        + "    /*text-shadow:1px 1px 1px #000;*/\n"
+        + "}\n"
+        + "footer a:hover{\n"
+        + "    color:#000;\n"
+        + "}\n"
+        + '/* End of generated file */';
+};
+// reactiveTablesstylesheet
+var reactiveTablesStyleFile = function() {
+    return '\n'
+        + "/* Base styles for this pen */\n"
+        + "*,\n"
+        + "*:before,\n"
+        + "*:after {\n"
+        + "    -webkit-box-sizing: border-box;\n"
+        + "    -moz-box-sizing:    border-box;\n"
+        + "    box-sizing:         border-box;\n"
+        + "}\n"
+        + "/*body {\n"
+        + " margin: 0 auto;\n"
+        + " max-width: 640px;\n"
+        + " width: 90%;\n"
+        + " }\n"
+        + " body,\n"
+        + " button {\n"
+        + " font-family: \"Helvetica Neue\", Arial, sans-serif;\n"
+        + " }\n"
+        + " button {\n"
+        + " font-size: 100%;\n"
+        + " }*/\n"
+        + "a:hover {\n"
+        + "    text-decoration: none;\n"
+        + "}\n"
+        + "header,\n"
+        + ".content,\n"
+        + ".content p {\n"
+        + "    margin: 4em 0;\n"
+        + "    text-align: center;\n"
+        + "}\n"
+        + "/**\n"
+        + " * Tooltips!\n"
+        + " */\n"
+        + "/* Base styles for the element that has a tooltip */\n"
+        + "[data-tooltip],\n"
+        + ".tooltip {\n"
+        + "    position: relative;\n"
+        + "    cursor: pointer;\n"
+        + "}\n"
+        + "/* Base styles for the entire tooltip */\n"
+        + "[data-tooltip]:before,\n"
+        + "    [data-tooltip]:after,\n"
+        + ".tooltip:before,\n"
+        + ".tooltip:after {\n"
+        + "    position: absolute;\n"
+        + "    visibility: hidden;\n"
+        + "    -ms-filter: \"progid:DXImageTransform.Microsoft.Alpha(Opacity=0)\";\n"
+        + "    filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);\n"
+        + "    opacity: 0;\n"
+        + "    -webkit-transition:\n"
+        + "    opacity 0.2s ease-in-out,\n"
+        + "    visibility 0.2s ease-in-out,\n"
+        + "    -webkit-transform 0.2s cubic-bezier(0.71, 1.7, 0.77, 1.24);\n"
+        + "    -moz-transition:\n"
+        + "    opacity 0.2s ease-in-out,\n"
+        + "    visibility 0.2s ease-in-out,\n"
+        + "    -moz-transform 0.2s cubic-bezier(0.71, 1.7, 0.77, 1.24);\n"
+        + "    transition:\n"
+        + "        opacity 0.2s ease-in-out,\n"
+        + "        visibility 0.2s ease-in-out,\n"
+        + "        transform 0.2s cubic-bezier(0.71, 1.7, 0.77, 1.24);\n"
+        + "    -webkit-transform: translate3d(0, 0, 0);\n"
+        + "    -moz-transform:    translate3d(0, 0, 0);\n"
+        + "    transform:         translate3d(0, 0, 0);\n"
+        + "    pointer-events: none;\n"
+        + "}\n"
+        + "/* Show the entire tooltip on hover and focus */\n"
+        + "[data-tooltip]:hover:before,\n"
+        + "[data-tooltip]:hover:after,\n"
+        + "[data-tooltip]:focus:before,\n"
+        + "[data-tooltip]:focus:after,\n"
+        + ".tooltip:hover:before,\n"
+        + ".tooltip:hover:after,\n"
+        + ".tooltip:focus:before,\n"
+        + ".tooltip:focus:after {\n"
+        + "    visibility: visible;\n"
+        + "    -ms-filter: \"progid:DXImageTransform.Microsoft.Alpha(Opacity=100)\";\n"
+        + "    filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100);\n"
+        + "    opacity: 1;\n"
+        + "}\n"
+        + "/* Base styles for the tooltip's directional arrow */\n"
+        + ".tooltip:before,\n"
+        + "    [data-tooltip]:before {\n"
+        + "    z-index: 1001;\n"
+        + "    border: 6px solid transparent;\n"
+        + "    background: transparent;\n"
+        + "    content: \"\";\n"
+        + "}\n"
+        + "/* Base styles for the tooltip's content area */\n"
+        + ".tooltip:after,\n"
+        + "    [data-tooltip]:after {\n"
+        + "    z-index: 1000;\n"
+        + "    padding: 8px;\n"
+        + "    width: 160px;\n"
+        + "    background-color: #000;\n"
+        + "    background-color: hsla(0, 0%, 20%, 0.9);\n"
+        + "    color: #fff;\n"
+        + "    content: attr(data-tooltip);\n"
+        + "    font-size: 14px;\n"
+        + "    line-height: 1.2;\n"
+        + "}\n"
+        + "/* Directions */\n"
+        + "/* Top (default) */\n"
+        + "[data-tooltip]:before,\n"
+        + "[data-tooltip]:after,\n"
+        + ".tooltip:before,\n"
+        + ".tooltip:after,\n"
+        + ".tooltip-top:before,\n"
+        + ".tooltip-top:after {\n"
+        + "    bottom: 100%;\n"
+        + "    left: 50%;\n"
+        + "}\n"
+        + "[data-tooltip]:before,\n"
+        + ".tooltip:before,\n"
+        + ".tooltip-top:before {\n"
+        + "    margin-left: -6px;\n"
+        + "    margin-bottom: -12px;\n"
+        + "    border-top-color: #000;\n"
+        + "    border-top-color: hsla(0, 0%, 20%, 0.9);\n"
+        + "}\n"
+        + "/* Horizontally align top/bottom tooltips */\n"
+        + "[data-tooltip]:after,\n"
+        + ".tooltip:after,\n"
+        + ".tooltip-top:after {\n"
+        + "    margin-left: -80px;\n"
+        + "}\n"
+        + "[data-tooltip]:hover:before,\n"
+        + "[data-tooltip]:hover:after,\n"
+        + "[data-tooltip]:focus:before,\n"
+        + "[data-tooltip]:focus:after,\n"
+        + ".tooltip:hover:before,\n"
+        + ".tooltip:hover:after,\n"
+        + ".tooltip:focus:before,\n"
+        + ".tooltip:focus:after,\n"
+        + ".tooltip-top:hover:before,\n"
+        + ".tooltip-top:hover:after,\n"
+        + ".tooltip-top:focus:before,\n"
+        + ".tooltip-top:focus:after {\n"
+        + "    -webkit-transform: translateY(-12px);\n"
+        + "    -moz-transform:    translateY(-12px);\n"
+        + "    transform:         translateY(-12px);\n"
+        + "}\n"
+        + "/* Left */\n"
+        + ".tooltip-left:before,\n"
+        + ".tooltip-left:after {\n"
+        + "    right: 100%;\n"
+        + "    bottom: 50%;\n"
+        + "    left: auto;\n"
+        + "}\n"
+        + ".tooltip-left:before {\n"
+        + "    margin-left: 0;\n"
+        + "margin-right: -12px;\n"
+        + "    margin-bottom: 0;\n"
+        + "    border-top-color: transparent;\n"
+        + "    border-left-color: #000;\n"
+        + "    border-left-color: hsla(0, 0%, 20%, 0.9);\n"
+        + "}\n"
+        + ".tooltip-left:hover:before,\n"
+        + ".tooltip-left:hover:after,\n"
+        + ".tooltip-left:focus:before,\n"
+        + ".tooltip-left:focus:after {\n"
+        + "    -webkit-transform: translateX(-12px);\n"
+        + "    -moz-transform:    translateX(-12px);\n"
+        + "    transform:         translateX(-12px);\n"
+        + "}\n"
+        + "/* Bottom */\n"
+        + ".tooltip-bottom:before,\n"
+        + ".tooltip-bottom:after {\n"
+        + "    top: 100%;\n"
+        + "    bottom: auto;\n"
+        + "    left: 50%;\n"
+        + "}\n"
+        + ".tooltip-bottom:before {\n"
+        + "    margin-top: -12px;\n"
+        + "    margin-bottom: 0;\n"
+        + "    border-top-color: transparent;\n"
+        + "    border-bottom-color: #000;\n"
+        + "    border-bottom-color: hsla(0, 0%, 20%, 0.9);\n"
+        + "}\n"
+        + ".tooltip-bottom:hover:before,\n"
+        + ".tooltip-bottom:hover:after,\n"
+        + ".tooltip-bottom:focus:before,\n"
+        + ".tooltip-bottom:focus:after {\n"
+        + "    -webkit-transform: translateY(12px);\n"
+        + "    -moz-transform:    translateY(12px);\n"
+        + "    transform:         translateY(12px);\n"
+        + "}\n"
+        + "/* Right */\n"
+        + ".tooltip-right:before,\n"
+        + ".tooltip-right:after {\n"
+        + "    bottom: 50%;\n"
+        + "    left: 100%;\n"
+        + "}\n"
+        + ".tooltip-right:before {\n"
+        + "    margin-bottom: 0;\n"
+        + "    margin-left: -12px;\n"
+        + "    border-top-color: transparent;\n"
+        + "    border-right-color: #000;\n"
+        + "    border-right-color: hsla(0, 0%, 20%, 0.9);\n"
+        + "}\n"
+        + ".tooltip-right:hover:before,\n"
+        + ".tooltip-right:hover:after,\n"
+        + ".tooltip-right:focus:before,\n"
+        + ".tooltip-right:focus:after {\n"
+        + "    -webkit-transform: translateX(12px);\n"
+        + "    -moz-transform:    translateX(12px);\n"
+        + "    transform:         translateX(12px);\n"
+        + "}\n"
+        + "/* Move directional arrows down a bit for left/right tooltips */\n"
+        + ".tooltip-left:before,\n"
+        + ".tooltip-right:before {\n"
+        + "    top: 3px;\n"
+        + "}\n"
+        + "/* Vertically center tooltip content for left/right tooltips */\n"
+        + ".tooltip-left:after,\n"
+        + ".tooltip-right:after {\n"
+        + "    margin-left: 0;\n"
+        + "    margin-bottom: -16px;\n"
+        + "}\n"
+        + '/* End of generated file */';
+};
+// reports stylesheet
+var reportsStyleFile = function() {
+    return '\n'
+        + ""
+        + ".tftable {font-size:12px;color:#333333;width:100%;border-width: 1px;border-color: #729ea5;border-collapse: collapse;}\n"
+        + ".tftable th {font-size:12px;background-color:#acc8cc;border-width: 1px;padding: 8px;border-style: solid;border-color: #729ea5;text-align:right;}\n"
+        + ".tftable tr {background-color:#d4e3e5;}\n"
+        + ".tftable td {font-size:12px;border-width: 1px;padding: 8px;border-style: solid;border-color: #729ea5;text-align:right;}\n"
+        + ".tftable tr:hover {background-color:#ffffff;}\n"
+        + '/* End of generated file */';
+};
+// sidebar stylesheet
+var sidebarStyleFile = function() {
+    return '\n'
+        + "#wrapper {\n"
+        + "    padding-left: 0;\n"
+        + "    -webkit-transition: all 0.5s ease;\n"
+        + "    -moz-transition: all 0.5s ease;\n"
+        + "    -o-transition: all 0.5s ease;\n"
+        + "    transition: all 0.5s ease;\n"
+        + "}\n"
+        + "\n"
+        + "#wrapper.toggled {\n"
+        + "    padding-left: 250px;\n"
+        + "}\n"
+        + "\n"
+        + "#sidebar-wrapper {\n"
+        + "    z-index: 1000;\n"
+        + "    position: fixed;\n"
+        + "    left: 250px;\n"
+        + "    width: 0;\n"
+        + "    height: 100%;\n"
+        + "    margin-left: -250px;\n"
+        + "    overflow-y: auto;\n"
+        + "    background: #000;\n"
+        + "    -webkit-transition: all 0.5s ease;\n"
+        + "    -moz-transition: all 0.5s ease;\n"
+        + "    -o-transition: all 0.5s ease;\n"
+        + "    transition: all 0.5s ease;\n"
+        + "}\n"
+        + "\n"
+        + "#wrapper.toggled #sidebar-wrapper {\n"
+        + "    width: 250px;\n"
+        + "}\n"
+        + "\n"
+        + "#page-content-wrapper {\n"
+        + "    width: 100%;\n"
+        + "    padding: 15px;\n"
+        + "}\n"
+        + "\n"
+        + "#wrapper.toggled #page-content-wrapper {\n"
+        + "    position: absolute;\n"
+        + "    margin-right: -250px;\n"
+        + "}\n"
+        + "\n"
+        + "/* Sidebar Styles */\n"
+        + "\n"
+        + ".sidebar-nav {\n"
+        + "    position: absolute;\n"
+        + "    top: 0;\n"
+        + "    width: 250px;\n"
+        + "    margin: 0;\n"
+        + "    padding: 0;\n"
+        + "    list-style: none;\n"
+        + "}\n"
+        + "\n"
+        + ".sidebar-nav li {\n"
+        + "    text-indent: 20px;\n"
+        + "    line-height: 40px;\n"
+        + "}\n"
+        + "\n"
+        + ".sidebar-nav li a {\n"
+        + "    display: block;\n"
+        + "    text-decoration: none;\n"
+        + "    color: #999999;\n"
+        + "}\n"
+        + "\n"
+        + ".sidebar-nav li a:hover {\n"
+        + "    text-decoration: none;\n"
+        + "    color: #fff;\n"
+        + "    background: rgba(255,255,255,0.2);\n"
+        + "}\n"
+        + "\n"
+        + ".sidebar-nav li a:active,\n"
+        + ".sidebar-nav li a:focus {\n"
+        + "    text-decoration: none;\n"
+        + "}\n"
+        + "\n"
+        + ".sidebar-nav > .sidebar-brand {\n"
+        + "    height: 65px;\n"
+        + "    font-size: 18px;\n"
+        + "    line-height: 60px;\n"
+        + "}\n"
+        + "\n"
+        + ".sidebar-nav > .sidebar-brand a {\n"
+        + "    color: #999999;\n"
+        + "}\n"
+        + "\n"
+        + ".sidebar-nav > .sidebar-brand a:hover {\n"
+        + "    color: #fff;\n"
+        + "    background: none;\n"
+        + "}\n"
+        + "\n"
+        + "@media(min-width:768px) {\n"
+        + "    #wrapper {\n"
+        + "        padding-left: 250px;\n"
+        + "    }\n"
+        + "    \n"
+        + "    #wrapper.toggled {\n"
+        + "        padding-left: 0;\n"
+        + "    }\n"
+        + "    \n"
+        + "    #sidebar-wrapper {\n"
+        + "        width: 250px;\n"
+        + "    }\n"
+        + "    \n"
+        + "    #wrapper.toggled #sidebar-wrapper {\n"
+        + "        width: 0;\n"
+        + "    }\n"
+        + "    \n"
+        + "    #page-content-wrapper {\n"
+        + "        padding: 20px;\n"
+        + "    }\n"
+        + "    \n"
+        + "    #wrapper.toggled #page-content-wrapper {\n"
+        + "        position: relative;\n"
+        + "        margin-right: 0;\n"
+        + "    }\n"
+        + "}\n"
+        + '/* End of generated file */';
+};
+// loading template
+var loadingFile = function() {
+    return '\n'
+        + '<template name="loading">\n'
+        + '    {{> spinner}}\n'
+        + '</template>\n'
+        + '<!-- End of generated file -->';
+}
+//dahboard layout
+var predashboardLayoutFile = function() {
+    return '\n'
+        + '<template name="preDashboardLayout">\n'
+        + '    <style>\n'
+        + '        body { padding-top: 66px; }\n'
+        + '    </style>\n'
+        + '    <div class="navbar navbar-default navbar-fixed-top">\n'
+        + '        <div class="container">\n'
+        + '            <div class="navbar-header">\n'
+        + '                <a href="#" class="navbar-brand">ApplicationName</a>\n'
+        + '            </div>\n'
+        + '        </div>\n'
+        + '    </div>\n'
+        + '    <div class="container-fluid">\n'
+        + '        <div class="row row-centered">\n'
+        + '            {{>yield}}\n'
+        + '        </div>\n'
+        + '        <div class="row-centered" style="margin-top: -13px;">\n'
+        + '            <hr>\n'
+        + '            <div style="margin-top: -15px;">\n'
+        + '                <h6><em>Copyright &copy; 2014 by EneTel.</em><br/>All Rights Reserved.</h6>\n'
+        + '            </div>\n'
+        + '        </div>\n'
+        + '    </div>\n'
+        + '    <!-- Footer -->\n'
+        + '    <footer>\n'
+        + '        <a href="#"><em>Powered by EneTel solutions</em></a>\n'
+        + '    </footer>\n'
+        + '</template>\n'
+        + '<!-- End of generated file -->';
+}
+// dashboard Template
+var dashboardTemplateFile = function() {
+    return '\n'
+        + '<template name="dashboard">\n'
+        + '    <link rel="stylesheet" type="text/css" href="/assets/css/reactiveTables.css">\n'
+        + '    <div class="row row-centered">\n'
+        + '        {{#if currentUser}}\n'
+        + '            <div class="well">\n'
+        + '                <p>Dobrodosli ....</p>\n'
+        + '            </div>\n'
+        + '        {{/if}}\n'
+        + '    </div>\n'
+        + '</template>\n'
+        + '<!-- End of generated file -->';
+}
+// dashboard layout
+var dashboardLaytoutjsFile = function() {
+    return '\n'
+        + 'Template.dashboardLayout.rendered = function() {\n'
+        + '    $("#menu-toggle").click(function(e) {\n'
+        + '        $("#wrapper").toggleClass("toggled");\n'
+        + '        //$(\'#toolbarMenu\').click();\n'
+        + '        e.preventDefault();\n'
+        + '    });\n'
+        + '    $(\'#menu-toggle\').click();\n'
+        + '}\n'
+        + '\n'
+        + 'Template.dashboardLayout.events({\n'
+        + '    \'click #logout\': function (event) {\n'
+        + '        Meteor.logout();\n'
+        + '    }\n'
+        + '});\n'
+        + '// End of generated file';
+}
+// main js
+var mainJSFile = function() {
+    return '\n'
+        + '// First executable JScript'
+        + '// End of generated file';
+}
+// home js
+var homejsFile = function() {
+    return '\n'
+        + "Template.home.events({\n"
+        + "    'submit #login-form' : function(e, t){\n"
+        + "        e.preventDefault();\n"
+        + "        // retrieve the input field values\n"
+        + "        var username = t.find('#inputUsername').value;\n"
+        + "        var password = t.find('#inputPassword').value;\n"
+        + "        // Trim and validate your fields here....\n"
+        + "        username = trimInput(username);\n"
+        + "        if (isValidPassword(password)) {\n"
+        + "            Meteor.loginWithPassword(username, password, function(err){\n"
+        + "                if (err) {\n"
+        + "                    // The user might not have been found, or their passwword\n"
+        + "                    // could be incorrect. Inform the user that their\n"
+        + "                    // login attempt has failed.\n"
+        + "                    t.find('#errorText').innerHTML = '<strong>Greška u prijavi!</strong>';\n"
+        + "                } else {\n"
+        + "                    // The user has been logged in.\n"
+        + "                    Router.go('/dashboard');\n"
+        + "                }\n"
+        + "            });\n"
+        + "        }\n"
+        + "        return false;\n"
+        + "    }\n"
+        + "});\n"
+        + "\n"
+        + "// trim helper\n"
+        + "var trimInput = function(val) {\n"
+        + "    return val.replace(/^\\s*|\\s*$/g, \"\");\n"
+        + "}\n"
+        + "// provera passworda na duzinu\n"
+        + "var isValidPassword = function(val) {\n"
+        + "    return val.length >= 3 ? true : false;\n"
+        + "}\n"
+        + "//\n"
+        + "Template.home.rendered = function() {\n"
+        + "    if (Meteor.userId()){\n"
+        + "        Router.go('/dashboard');\n"
+        + "    }\n"
+        + "}\n"
+        + '// End of generated file';
+}
+//dashboard js
+var dashboardjsFile = function() {
+    return '\n'
+        + "Template.dashboard.rendered = function() {\n"
+        + "\n"
+        + "}"
+        + '// End of generated file';
+}
+
+// main html
+var maintmlFile = function() {
+    return '\n'
+        + '<head>\n'
+        + '    <!--             -->\n'
+        + '    <!-- Meta podaci -->\n'
+        + '    <!--             -->\n'
+        + '    <meta charset="utf-8"/>\n'
+        + '    <!-- use the following meta to force IE use its most up to date rendering engine -->\n'
+        + '    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>\n'
+        + '    <!--Please note that with mobile devices, pages may not look good when user zooms in/out, especially when navbar or sidebar is fixed.-->\n'
+        + '    <!--One option is preventing user from zooming in/out using user-scalable=no property:-->\n'
+        + '    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>\n'
+        + '\n'
+        + '    <!--                       -->\n'
+        + '    <!-- Title and description -->\n'
+        + '    <!--                       -->\n'
+        + '    <title>Application Name</title>\n'
+        + '    <meta name="description" content="page description"/>\n'
+        + '    <!--Favicon-->\n'
+        + '    <link rel="shortcut icon" sizes="16x16 32x32" href="/favicon.ico?v=2">\n'
+        + '\n'
+        + '        <!--           -->\n'
+        + '        <!-- CSS Files -->\n'
+        + '        <!--           -->\n'
+        + '\n'
+        + '        <!--                   -->\n'
+        + '        <!-- JavaScripts files -->\n'
+        + '        <!--                   -->\n'
+        + '</head>\n'
+        + '<!-- End of generated file -->';
+}
+
+// home html
+var homeHTMLFile = function() {
+    return '\n'
+        + '<template name="home">\n'
+        + '    <div class="well col-xs-10 col-md-6 col-lg-6 col-centered">\n'
+        + '        <h3>Enetel prijava</h3>\n'
+        + '    <hr>\n'
+        + '    <form id="login-form" action="action">\n'
+        + '        <div class="form-group">\n'
+        + '            <label for="inputUsername">Korisnik:</label>\n'
+        + '            <input type="text" class="form-control" id="inputUsername" autofocus="autofocus">\n'
+        + '        </div>\n'
+        + '        <div class="form-group">\n'
+        + '            <label for="inputPassword">Lozinka:</label>\n'
+        + '            <input type="password" class="form-control" id="inputPassword">\n'
+        + '        </div>\n'
+        + '        <div class="checkbox pull-right">\n'
+        + '            <label><input type="checkbox">Zapamti me </label>\n'
+        + '        </div>\n'
+        + '        <button type="submit" class="btn btn-primary">Prijava</button>\n'
+        + '        <p class="text-danger row-centered" id="errorText"></p>\n'
+        + '    </form>\n'
+        + '    </div>\n'
+        + '    <div class="div-company">\n'
+        + '        <strong>Enetel D.O.O.</strong><br/>\n'
+        + '            Ulica i broj<br/>\n'
+        + '            11000 Belgrade. Serbia<br/>\n'
+        + '            Phone : +381.11.11.11.111<br/>\n'
+        + '            Fax : +381.11.11.11.111<br/>\n'
+        + '            info@enetel.rs\n'
+        + '    </div>\n'
+        + '</template>\n'
+        + '<!-- End of generated file -->';
+}
+
+// dashboard layout html
+var dashboardLayoutHTMLFile = function() {
+    return '\n'
+        + '<template name="dashboardLayout">\n'
+        + '    <!--Inline style for this template-->\n'
+        + '    <style>\n'
+        + '        .menu .btn {\n'
+        + '            float:none;\n'
+        + '            margin-top: -25px;\n'
+        + '        }\n'
+        + '        .well {\n'
+        + '            height: 15px;\n'
+        + '        }\n'
+        + '        #iContainer{\n'
+        + '            margin-top: -21px;\n'
+        + '        }\n'
+        + '    </style>\n'
+        + '    <link rel="stylesheet" type="text/css" href="/assets/css/sidebar.css">\n'
+        + '    <div id="wrapper">\n'
+        + '        <!-- Sidebar -->\n'
+        + '        <div id="sidebar-wrapper">\n'
+        + '            <ul class="sidebar-nav">\n'
+        + '                <li class="sidebar-brand">\n'
+        + '                    <a href="/"><u>Application Name</u></a>\n'
+        + '                </li>\n'
+        + '                <li><a href="/#"></a></li>\n'
+        + '            </ul>\n'
+        + '        </div>\n'
+        + '        <!-- /#sidebar-wrapper -->\n'
+        + '        <!-- Page Content -->\n'
+        + '        <div id="page-content-wrapper">\n'
+        + '            <div class="container-fluid">\n'
+        + '                <div class="row">\n'
+        + '                    <div class="col-lg-12 text-center text-info" style="margin-top:-20px;">\n'
+        + '                        <em><b>Application description ...</b></em>\n'
+        + '                    </div>\n'
+        + '                    <div class="col-lg-12 well menu" id="toolbarMenu">\n'
+        + '                        <table>\n'
+        + '                            <tr>\n'
+        + '                                <td class="pull-left">\n'
+        + '                                    <a href="#menu-toggle" class="btn btn-default btn-xs tooltip-right" id="menu-toggle" data-tooltip="Menu">\n'
+        + '                                        <span><i class="glyphicon glyphicon-th-list"></i></span>\n'
+        + '                                    </a>\n'
+        + '                                </td>\n'
+        + '                                <td width="100%">\n'
+        + '                                <!--Tools Menu-->\n'
+        + '                                    \n'
+        + '                                </td>\n'
+        + '                                <td class="pull-right">\n'
+        + '                                    <a href="#" class="btn btn-default btn-xs tooltip-left" id="logout" data-tooltip="Odjava">\n'
+        + '                                        <i class="text-danger glyphicon glyphicon-log-out"></i>\n'
+        + '                                    </a>\n'
+        + '                                </td>\n'
+        + '                            </tr>\n'
+        + '                        </table>\n'
+        + '                    </div>\n'
+        + '                    <div id="iContainer" class="col-lg-12">\n'
+        + '                      {{>yield}}\n'
+        + '                    </div>\n'
+        + '                </div>\n'
+        + '            </div>\n'
+        + '            <!-- Footer -->\n'
+        + '            <div class="row-centered" style="margin-top: -36px;">\n'
+        + '                <hr>\n'
+        + '                <div style="margin-top: -18px;">\n'
+        + '                    <h6><em>Copyright &copy; 2014 by EneTel.</em><br/>All Rights Reserved.</h6>\n'
+        + '                </div>\n'
+        + '            </div>\n'
+        + '            <!-- /#footer -->\n'
+        + '        </div><!-- /#page-content-wrapper -->\n'
+        + '    </div><!-- /#wrapper -->\n'
+        + '</template>\n'
+        + '<!-- End of generated file -->';
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Run
+//
+// Glavna funkcija
+var mGenDo = function getP() {
+    // Clear screen
+//    console.log(clc.reset);
+    // Naslov
+//    console.log(clc('m_G_e_n  First').rainbow);
+//    console.log(clc('Generation proccess started!').cyan);
+    writeFile("server/startup/start.js", header("server/startup/start.js") + startJS());
+    writeFile("client/lib/i18n_Config.js", header("client/lib/i18n_Config.js") + i18nFile());
+    writeFile("client/lib/spinner.js", header("client/lib/spinner.js") + spinnerFile());
+    writeFile("client/routers/config.js", header("client/router/config.js") + routerConfigFile());
+    writeFile("client/routers/dashboard.js", header("client/router/dashboard.js") + dashboardRouterFile());
+    writeFile("client/routers/home.js", header("client/router/home.js") + homeRouterFile());
+    writeFile("client/stylesheets/main.css", header("client/stylesheets/main.css") + mainStyleFile());
+    writeFile("public/assets/css/reactiveTables.css", header("public/assets/css/reactiveTables.css") + reactiveTablesStyleFile());
+    writeFile("public/assets/css/reports.css", header("public/assets/css/reports.css") + reportsStyleFile());
+    writeFile("public/assets/css/sidebar.css", header("public/assets/css/sidebar.css") + sidebarStyleFile());
+    writeFile("client/views/components/loading.html", headerHTML("client/views/components/loading.html") + loadingFile());
+    writeFile("client/views/components/predashboardLayout.html", headerHTML("client/views/components/predashboardLayout.html") + predashboardLayoutFile());
+    writeFile("client/views/components/dashboardLayout.js", header("client/views/components/dashboardLayout.js") + dashboardLaytoutjsFile());
+    writeFile("client/main.js", header("client/main.js") + mainJSFile());
+    writeFile("client/views/home.js", header("client/views/home.js") + homejsFile());
+    writeFile("client/views/dashboard.html", headerHTML("client/views/dashboard.html") + dashboardTemplateFile());
+    writeFile("client/views/dashboard.js", header("client/views/dashboard.js") + dashboardjsFile());
+    writeFile("client/main.html", headerHTML("client/main.html") + maintmlFile());
+    writeFile("client/views/home.html", headerHTML("client/views/home.html") + homeHTMLFile());
+    writeFile("client/views/components/dashboardLayout.html", headerHTML("client/views/components/dashboardLayout.html") + dashboardLayoutHTMLFile());
+//    writeFile("", headerHTML("") + );
+    //console.log("End of generation!");
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Start rada
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+mGenDo();

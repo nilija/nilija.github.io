@@ -1,0 +1,113 @@
+#!/bin/bash
+# Normal Colors
+Black='\e[0;30m'        # Black
+Red='\e[0;31m'          # Red
+Green='\e[0;32m'        # Green
+Yellow='\e[0;33m'       # Yellow
+Blue='\e[0;34m'         # Blue
+Purple='\e[0;35m'       # Purple
+Cyan='\e[0;36m'         # Cyan
+White='\e[0;37m'        # White
+# Bold
+BBlack='\e[1;30m'       # Black
+BRed='\e[1;31m'         # Red
+BGreen='\e[1;32m'       # Green
+BYellow='\e[1;33m'      # Yellow
+BBlue='\e[1;34m'        # Blue
+BPurple='\e[1;35m'      # Purple
+BCyan='\e[1;36m'        # Cyan
+BWhite='\e[1;37m'       # White
+# Background
+On_Black='\e[40m'       # Black
+On_Red='\e[41m'         # Red
+On_Green='\e[42m'       # Green
+On_Yellow='\e[43m'      # Yellow
+On_Blue='\e[44m'        # Blue
+On_Purple='\e[45m'      # Purple
+On_Cyan='\e[46m'        # Cyan
+On_White='\e[47m'       # White
+NC="\e[m"               # Color Reset
+ALERT=${BWhite}${On_Red} # Bold White on red background
+function ask() {
+    printf "$@" 
+    printf ' [Y/n] ' ; 
+    read -s -n 1 key  # -s: do not echo input character. -n 1: read only 1 character (separate with space)
+    case $key in
+        ""|"y"|"Y") return 0 ;;
+        *) return 1;
+    esac
+}
+
+clear
+current_dir=$(pwd)
+script_dir=$(dirname $0)/mTemplateFiles/
+#log_file=" >install.log  2>install.log"
+#printf ${script_dir}
+#rm -rf $1
+printf "\n        ${BCyan}Meteor JS aplikacija${NC}\n\n"
+if [ "$1" != "" ]; then
+    if ask "${BBlue}Nova Meteor JS aplikacija ${Green}http://localhost:3000${BBlue} -> ${Yellow}${current_dir}/$1${BBlue}?${NC}" ; then 
+    	printf "\n${Yellow}Start...${NC}\n"
+		printf "${Yellow}Kreiranje Meteor JS aplikacije${NC}\n"
+        mkdir $1
+        cd ${current_dir}/$1
+        printf ${current_dir}/$1
+        printf "\n${Yellow}Brisanje autogenerisanih fajlova.${NC}"
+		rm -f $1.*
+
+				printf "\n${Yellow}Manipulacija meteor paketima.${NC}\n"
+        		printf "\n${Red}- autopublish ${Green}[Publish the entire database to all clients]${NC}\n"
+        		printf "\n${Red}- insecure ${Green}[Allow all database writes by default]${NC}\n"
+        		printf "\n${Yellow}+ account-base ${Green}[A user account system]${NC}\n"
+        		printf "${Yellow}+ account-password ${Green}[Password support for accounts]${NC}\n"
+        		printf "${Yellow}+ iron:router ${Green}[Routing specifically designed for Meteor]${NC}\n"
+        		printf "${Yellow}+ maximdubrovin:wait-on-lib-js ${Green}[Use Meteor Iron-Routers waitOn to load external javascript]${NC}\n"
+        		printf "${Yellow}+ tap:i18n ${Green}[Internalization: simplest package]${NC}\n"
+        		printf "${Yellow}+ cfs:standard-packages ${Green}[Filesystem for Meteor, collectionFS]${NC}\n"
+        		printf "${Yellow}+ cfs:gridfs ${Green}[GridFS storage adapter for CollectionFS]${NC}\n"
+        		printf "${Yellow}+ raix:ui-dropped-event ${Green}[Add dropped event to Meteor UI Templates]${NC}\n"
+        		printf "${Yellow}+ http ${Green}[Make HTTP calls to remote servers]${NC}\n"
+        		printf "${Yellow}+ sacha:spin ${Green}[Simple spinner package for Meteor]${NC}\n"
+        		printf "${Yellow}+ email ${Green}[Send email messages]${NC}\n"
+        		printf "${Yellow}+ aslagle:reactive-table ${Green}[A reactive table designed for Meteor]${NC}\n"
+        		printf "${Yellow}+ linto:fontawesome ${Green}[fontawesome 4.2.0 re-packaged for meteorjs]${NC}\n"
+        		printf "${Yellow}+ mizzao:bootstrap-3 ${Green}[HTML, CSS, and JS framework for developing responsive, mobile first projects on the web.]${NC}\n"
+        		printf "${Yellow}+ mrt:highcharts ${Green}[Easily create charts with Highcharts.]${NC}\n"
+        		printf "${Yellow}+ zimme:bootstrap-growl ${Green}[Turns standard Bootstrap alerts into 'Growl-like' notifications.]${NC}\n"
+        		printf "\n${BGreen}Gotova priprema!${NC}\n"
+echo '============================================='
+echo '          more dir or files !!!'
+echo '============================================='
+
+printf "\n${BGreen}Kopiranje!${NC}\n"
+
+cp -R ../meteor2.5.2/.meteor/ ./.meteor/
+cp -R ../meteor2.5.2/node_modules/ ./node_modules/
+cp -R ../_node_modules/ ./_node_modules/
+
+cp ../*.txt ./
+
+cp ../mGenFirst ./mGenFirst
+cp ../mGen_c ./mGen_c
+
+echo '============================================='
+printf "\n${BGreen}mGenFirst: Kostur!${NC}\n"
+./mGenFirst
+
+echo '============================================='
+printf "\n${BGreen}mGen_c: Kolekcije!${NC}\n"
+./mGen_c
+
+cp ../start ./start
+#./start
+        exit
+    else
+        printf "\n${ALERT}Prekid!${NC}\n"
+        exit
+    fi  
+else
+	printf "${BBlue}Korišćenje - ${Green}mtemplateCopy <direktorijum na ${current_dir}/ ispod kojeg će biti sajt>\n"
+    printf "   ${BBlue}Primer:   ${Green}mtemplateCopy MyApp${BBlue} - napraviće sajt ${Yellow}http://localhost:3000${BBlue} na ${Yellow}${current_dir}/MyApp\n"
+    printf "\n${Red}Niste zadali ulazne parametre!!!${NC}\n"
+    exit
+fi

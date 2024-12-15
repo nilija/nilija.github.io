@@ -1,0 +1,17 @@
+collection=treca
+title=Prva app
+modalTitleAdd=Add New Entry
+modalTitleView=View Entry
+modalTitleEdit=Edit Entry
+modalTitleDelete=Delete Entry
+growlSuccessAdd=Successfully added!
+growlSuccessEdit=Successfully edited!
+growlSuccessDelete=Successfully deleted!
+---
+prvopolje,txt
+drugopolje,mail
+trece,number
+cetvro,password
+peto,date
+seto,checkbox
+sedmo,radio

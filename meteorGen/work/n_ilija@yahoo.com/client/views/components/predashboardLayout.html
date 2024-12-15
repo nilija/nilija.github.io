@@ -1,0 +1,38 @@
+<!-- /**
+ * Meteor: the smart way to build applications!
+ *
+ * @copyright     Copyright 2014, 
+ * @license       http://opensource.org/licenses/bsd-license.php The BSD License
+ *
+ * filename:      client/views/components/predashboardLayout.html
+ * generated:     2024/12/12 9:37
+ */ -->
+
+<template name="preDashboardLayout">
+    <style>
+        body { padding-top: 66px; }
+    </style>
+    <div class="navbar navbar-default navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <a href="#" class="navbar-brand">ApplicationName</a>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid">
+        <div class="row row-centered">
+            {{>yield}}
+        </div>
+        <div class="row-centered" style="margin-top: -13px;">
+            <hr>
+            <div style="margin-top: -15px;">
+                <h6><em>Copyright &copy; 2014 by EneTel.</em><br/>All Rights Reserved.</h6>
+            </div>
+        </div>
+    </div>
+    <!-- Footer -->
+    <footer>
+        <a href="#"><em>Powered by EneTel solutions</em></a>
+    </footer>
+</template>
+<!-- End of generated file -->
